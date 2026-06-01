@@ -1,7 +1,9 @@
 #include "webhandler.h"
 #include "config.h"
+#include <sys/time.h>
 #include "messages.h"
 #include "scheduler.h"
+#include "sprint_config.h"
 #include "websocket.h"
 #ifdef ESP32
 #include <WiFi.h>
@@ -331,6 +333,115 @@ void handleSetConfigBody(AsyncWebServerRequest *request,
     Serial.println("[WebHandler] ERROR: Exception in handleSetConfigBody");
     sendJsonError(request, 500, "Error saving configuration");
   }
+
+  delete body;
+  request->_tempObject = nullptr;
+}
+
+void handleTimeSync(AsyncWebServerRequest *request)
+{
+  if (!request->hasParam("ts"))
+  {
+    sendJsonError(request, 400, "missing ts parameter");
+    return;
+  }
+
+  struct tm checkTm;
+  if (!getLocalTime(&checkTm, 0))
+  {
+    time_t t = (time_t)request->arg("ts").toInt();
+    struct timeval tv = {t, 0};
+    settimeofday(&tv, nullptr);
+    setenv("TZ", config.getTzInfo().c_str(), 1);
+    tzset();
+    Serial.printf("[Sprint] Time synced from browser: %ld\n", (long)t);
+  }
+
+  handleGetTime(request);
+}
+
+void handleGetTime(AsyncWebServerRequest *request)
+{
+  struct tm timeinfo;
+  bool synced = getLocalTime(&timeinfo, 0);
+
+  JsonDocument doc;
+  doc["synced"] = synced;
+  doc["timestamp"] = (long)time(nullptr);
+  if (synced)
+  {
+    char buf[32];
+    strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", &timeinfo);
+    doc["localTime"] = buf;
+  }
+
+  String out;
+  serializeJson(doc, out);
+  request->send(200, "application/json", out);
+}
+
+void handleGetSprintConfig(AsyncWebServerRequest *request)
+{
+  request->send(200, "application/json", sprintConfig.toJson());
+}
+
+void handleSetSprintConfigBody(AsyncWebServerRequest *request,
+                               uint8_t *data,
+                               size_t len,
+                               size_t index,
+                               size_t total)
+{
+  if (index == 0)
+  {
+    request->_tempObject = new String();
+  }
+
+  String *body = static_cast<String *>(request->_tempObject);
+  if (!body)
+  {
+    sendJsonError(request, 500, "Internal buffer error");
+    return;
+  }
+
+  if (index == 0)
+  {
+    body->reserve(total);
+  }
+
+  body->concat(reinterpret_cast<char *>(data), len);
+
+  if (index + len != total)
+  {
+    return;
+  }
+
+  if (body->length() == 0 || !sprintConfig.fromJson(*body))
+  {
+    sendJsonError(request, 400, "Invalid JSON");
+    delete body;
+    request->_tempObject = nullptr;
+    return;
+  }
+
+  sprintConfig.save();
+
+  // If NTP hasn't synced, use the browser's clock as fallback
+  JsonDocument doc;
+  if (deserializeJson(doc, *body) == DeserializationError::Ok)
+  {
+    struct tm checkTm;
+    if (!getLocalTime(&checkTm, 0) && doc["clientTime"].is<JsonInteger>())
+    {
+      time_t clientTs = (time_t)doc["clientTime"].as<long long>();
+      struct timeval tv = {clientTs, 0};
+      settimeofday(&tv, nullptr);
+      setenv("TZ", config.getTzInfo().c_str(), 1);
+      tzset();
+      Serial.printf("[Sprint] Time set from browser: %lld\n", (long long)clientTs);
+    }
+  }
+
+  sendJsonSuccess(request, "Sprint config saved");
 
   delete body;
   request->_tempObject = nullptr;

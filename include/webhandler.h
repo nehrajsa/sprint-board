@@ -24,3 +24,11 @@ void handleSetConfigBody(AsyncWebServerRequest *request,
 						 size_t index,
 						 size_t total);
 void handleResetConfig(AsyncWebServerRequest *request);
+void handleTimeSync(AsyncWebServerRequest *request);
+void handleGetTime(AsyncWebServerRequest *request);
+void handleGetSprintConfig(AsyncWebServerRequest *request);
+void handleSetSprintConfigBody(AsyncWebServerRequest *request,
+                               uint8_t *data,
+                               size_t len,
+                               size_t index,
+                               size_t total);

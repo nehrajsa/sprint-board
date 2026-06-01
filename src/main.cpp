@@ -19,6 +19,7 @@
 #include "PluginManager.h"
 #include "config.h"
 #include "scheduler.h"
+#include "sprint_config.h"
 
 #include "plugins/ArtNet.h"
 #include "plugins/Blob.h"
@@ -51,10 +52,12 @@
 #include "plugins/AnimationPlugin.h"
 #include "plugins/BigClockPlugin.h"
 #include "plugins/ClockPlugin.h"
+#include "plugins/SprintPlugin.h"
 #include "plugins/WeatherPlugin.h"
 #endif
 
 #include "asyncwebserver.h"
+#include "http_time_sync.h"
 #include "messages.h"
 #include "ota.h"
 #include "screen.h"
@@ -129,6 +132,17 @@ void connectToWiFi()
     ESP.restart();
   }
 
+  // ESP32 + WiFiManager sometimes doesn't configure DNS from DHCP,
+  // which causes NTP hostname resolution to fail silently.
+  if (WiFi.dnsIP() == IPAddress(0, 0, 0, 0))
+  {
+    WiFi.config(WiFi.localIP(), WiFi.gatewayIP(), WiFi.subnetMask(),
+                IPAddress(1, 1, 1, 1), IPAddress(8, 8, 8, 8));
+    Serial.println("[WiFi] DNS not set by DHCP, applied fallback: 1.1.1.1 / 8.8.8.8");
+  }
+  Serial.print("[WiFi] DNS: ");
+  Serial.println(WiFi.dnsIP().toString());
+
   lastConnectionAttempt = millis();
 }
 
@@ -168,6 +182,7 @@ void baseSetup()
 
   // Initialize configuration system (always safe)
   config.begin();
+  sprintConfig.load();
 
 // server
 #ifdef ENABLE_SERVER
@@ -175,6 +190,26 @@ void baseSetup()
 
   // set time server using config values
   configTzTime(config.getTzInfo().c_str(), config.getNtpServer().c_str());
+
+  // Wait up to 5 s for SNTP; fall back to HTTP time API if it doesn't sync
+  {
+    struct tm checkTm;
+    int waited = 0;
+    while (waited < 5000 && !getLocalTime(&checkTm, 0))
+    {
+      delay(500);
+      waited += 500;
+    }
+    if (!getLocalTime(&checkTm, 0))
+    {
+      Serial.println("[Time] NTP not synced after 5s, trying HTTP fallback...");
+      syncTimeFromHTTP();
+    }
+    else
+    {
+      Serial.println("[Time] NTP synced at boot");
+    }
+  }
 
   initOTA(server);
   initWebsocketServer(server);
@@ -209,6 +244,7 @@ void baseSetup()
   pluginManager.addPlugin(new ClockPlugin());
   pluginManager.addPlugin(new PongClockPlugin());
   pluginManager.addPlugin(new TickingClockPlugin());
+  pluginManager.addPlugin(new SprintPlugin());
   pluginManager.addPlugin(new WeatherPlugin());
   pluginManager.addPlugin(new AnimationPlugin());
   pluginManager.addPlugin(new DDPPlugin());

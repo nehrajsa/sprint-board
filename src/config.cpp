@@ -63,6 +63,7 @@ void Config::setDefaults()
   weatherLocation = String(WEATHER_LOCATION);
   ntpServer = String(NTP_SERVER);
   tzInfo = String(TZ_INFO);
+  ianaTimezone = String(IANA_TIMEZONE);
   autoStartSchedule = false;
 }
 
@@ -79,6 +80,7 @@ void Config::load()
     weatherLocation = preferences.getString("weatherLoc", String(WEATHER_LOCATION));
     ntpServer = preferences.getString("ntpServer", String(NTP_SERVER));
     tzInfo = preferences.getString("tzInfo", String(TZ_INFO));
+    ianaTimezone = preferences.getString("ianaTz", String(IANA_TIMEZONE));
     autoStartSchedule = preferences.getBool("autoSchedule", false);
     
     Serial.println("[Config] Configuration loaded from storage");
@@ -101,6 +103,7 @@ void Config::save()
     preferences.putString("weatherLoc", weatherLocation);
     preferences.putString("ntpServer", ntpServer);
     preferences.putString("tzInfo", tzInfo);
+    preferences.putString("ianaTz", ianaTimezone);
     preferences.putBool("autoSchedule", autoStartSchedule);
     
     Serial.println("[Config] Configuration saved");
@@ -126,6 +129,11 @@ String Config::getNtpServer() const
 String Config::getTzInfo() const
 {
   return tzInfo.length() > 0 ? tzInfo : String(TZ_INFO);
+}
+
+String Config::getIanaTimezone() const
+{
+  return ianaTimezone.length() > 0 ? ianaTimezone : String(IANA_TIMEZONE);
 }
 
 bool Config::getAutoStartSchedule() const
@@ -155,6 +163,13 @@ void Config::setTzInfo(const String& tz)
   }
 }
 
+void Config::setIanaTimezone(const String& tz)
+{
+  if (tz.length() > 0 && tz.length() < 100) {
+    ianaTimezone = tz;
+  }
+}
+
 void Config::setAutoStartSchedule(bool autoStart)
 {
   autoStartSchedule = autoStart;
@@ -167,6 +182,7 @@ String Config::toJson() const
   doc["weatherLocation"] = weatherLocation;
   doc["ntpServer"] = ntpServer;
   doc["tzInfo"] = tzInfo;
+  doc["ianaTimezone"] = ianaTimezone;
   doc["autoStartSchedule"] = autoStartSchedule;
   
   String output;
@@ -212,7 +228,14 @@ bool Config::fromJson(const String& json)
       tzInfo = tz;
     }
   }
-  
+
+  if (doc["ianaTimezone"].is<String>()) {
+    String tz = doc["ianaTimezone"].as<String>();
+    if (tz.length() > 0 && tz.length() < 100) {
+      ianaTimezone = tz;
+    }
+  }
+
   if (doc["autoStartSchedule"].is<bool>()) {
     autoStartSchedule = doc["autoStartSchedule"].as<bool>();
   }

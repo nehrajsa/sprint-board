@@ -20,6 +20,7 @@ private:
   String weatherLocation;
   String ntpServer;
   String tzInfo;
+  String ianaTimezone;
   bool autoStartSchedule;
   bool initialized;
 
@@ -42,13 +43,15 @@ public:
   String getWeatherLocation() const;
   String getNtpServer() const;
   String getTzInfo() const;
+  String getIanaTimezone() const;
   bool getAutoStartSchedule() const;
   bool isInitialized() const { return initialized; }
-  
+
   // Setters with validation
   void setWeatherLocation(const String& location);
   void setNtpServer(const String& server);
   void setTzInfo(const String& tz);
+  void setIanaTimezone(const String& tz);
   void setAutoStartSchedule(bool autoStart);
   
   // Export to JSON
