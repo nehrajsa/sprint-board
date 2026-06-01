@@ -31,7 +31,18 @@ int SprintPlugin::computeDaysLeft(const String &dateStr) const
   target.tm_isdst = -1;
   time_t targetT = mktime(&target);
 
-  return (int)((targetT - todayT) / 86400L);
+  if (targetT < todayT)
+    return -1;
+
+  int count = 0;
+  for (time_t cur = todayT + 86400L; cur <= targetT; cur += 86400L)
+  {
+    struct tm curTm;
+    localtime_r(&cur, &curTm);
+    if (curTm.tm_wday != 0 && curTm.tm_wday != 6) // skip Sun=0, Sat=6
+      count++;
+  }
+  return count;
 }
 
 int SprintPlugin::nearestSprintDays() const
