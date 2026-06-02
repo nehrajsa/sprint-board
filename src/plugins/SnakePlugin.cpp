@@ -1,10 +1,12 @@
 #include "plugins/SnakePlugin.h"
 #include "constants.h"
+#include "controller.h"
 
 void SnakePlugin::initGame()
 {
   Screen.clear();
 
+  this->pendingDirection = 0;
   this->position = {TOTAL_PIXELS - COLS, TOTAL_PIXELS - COLS + 1, TOTAL_PIXELS - COLS + 2};
   for (const int &n : this->position)
   {
@@ -248,6 +250,44 @@ void SnakePlugin::findDirection()
   }
 }
 
+bool SnakePlugin::moveByDirection(uint8_t dir)
+{
+  int snakesize = this->position.size();
+  uint snakehead = this->position[snakesize - 1];
+  uint newpos;
+
+  switch (dir)
+  {
+  case 1: // up
+    if (snakehead < (uint)COLS) { end(); return false; }
+    newpos = snakehead - COLS;
+    break;
+  case 2: // right
+    if (snakehead % COLS == COLS - 1) { end(); return false; }
+    newpos = snakehead + 1;
+    break;
+  case 3: // down
+    if (snakehead >= (uint)(TOTAL_PIXELS - COLS)) { end(); return false; }
+    newpos = snakehead + COLS;
+    break;
+  case 4: // left
+    if (snakehead % COLS == 0) { end(); return false; }
+    newpos = snakehead - 1;
+    break;
+  default:
+    return false;
+  }
+
+  for (const uint &n : this->position)
+  {
+    if (n == newpos) { end(); return false; }
+  }
+
+  this->lastDirection = dir;
+  moveSnake(newpos);
+  return true;
+}
+
 void SnakePlugin::moveSnake(uint newpos)
 {
   if (newpos == this->dot)
@@ -367,7 +407,32 @@ void SnakePlugin::loop()
   case SnakePlugin::GAME_STATE_RUNNING:
     if (moveTimer.isReady(SnakePlugin::SNAKE_DELAY_MS))
     {
+#ifdef ESP32
+      // Consume new controller input, reject 180° reversals
+      if (controllerDirection != 0)
+      {
+        uint8_t newDir = controllerDirection;
+        controllerDirection = 0;
+        bool isReverse = (lastDirection == 1 && newDir == 3) ||
+                         (lastDirection == 3 && newDir == 1) ||
+                         (lastDirection == 2 && newDir == 4) ||
+                         (lastDirection == 4 && newDir == 2);
+        if (!isReverse)
+        {
+          pendingDirection = newDir;
+        }
+      }
+      if (pendingDirection != 0)
+      {
+        moveByDirection(pendingDirection);
+      }
+      else
+      {
+        this->findDirection();
+      }
+#else
       this->findDirection();
+#endif
     }
     break;
   case SnakePlugin::GAME_STATE_DEATH_ANIMATION:

@@ -26,6 +26,7 @@ interface SidebarProps {
   onArtnetChange: (value: number, shouldSend?: boolean) => void;
   onPersistPlugin: () => void;
   onGOLDelayChange: (value: number, shouldSend?: boolean) => void;
+  onSnakePair: () => void;
 }
 
 export const Sidebar: Component<SidebarProps> = (props) => {
@@ -145,6 +146,25 @@ export const Sidebar: Component<SidebarProps> = (props) => {
               />
               <div class="text-sm text-gray-600 text-right">{store?.GOLDelay}</div>
             </div>
+          </SidebarSection>
+        </Show>
+
+        <Show when={store?.plugin === 3 && !store?.isActiveScheduler}>
+          <div class="my-6 border-t border-gray-200" />
+
+          <SidebarSection title="Xbox Controller">
+            <button
+              type="button"
+              onClick={props.onSnakePair}
+              class="w-full bg-gray-700 text-white border-0 px-3 py-2 text-sm cursor-pointer font-semibold hover:opacity-80 active:-translate-y-px transition-all rounded flex items-center justify-center gap-2"
+            >
+              <i class="fa-solid fa-gamepad" />
+              <span>Pair Controller</span>
+            </button>
+            <p class="text-xs text-gray-500 text-center">
+              Hold sync ~3 s (rapid blink = BLE mode), then click.
+              D-pad or left stick steers the snake.
+            </p>
           </SidebarSection>
         </Show>
 
