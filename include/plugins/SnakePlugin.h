@@ -27,9 +27,12 @@ private:
   NonBlockingDelay animationTimer;
   uint8_t animationStep = 0;
 
+  uint8_t pendingDirection = 0;
+
   void initGame();
   void newDot();
   void findDirection();
+  bool moveByDirection(uint8_t dir);
   void moveSnake(uint newpos);
   void end();
   void updateDeathAnimation();

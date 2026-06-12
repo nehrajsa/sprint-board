@@ -100,6 +100,11 @@ export const App: Component = () => {
     toast(`Current mode set as default`, 1500);
   };
 
+  const handleSnakePair = () => {
+    actions.send(JSON.stringify({ event: "bt-pair" }));
+    toast("Hold the Xbox sync button ~3 s (BLE mode) then wait", 5000);
+  };
+
   const renderLedMatrix = () => (
     <div class="grid p-8 h-full justify-center items-center sm:p-4 sm:m-0">
       <Show
@@ -190,6 +195,7 @@ export const App: Component = () => {
           onArtnetChange={handleArtnetUniverseChange}
           onGOLDelayChange={handleGOLDelayChange}
           onPersistPlugin={handlePersistPlugin}
+          onSnakePair={handleSnakePair}
         />
       }
     />

@@ -57,6 +57,7 @@
 #endif
 
 #include "asyncwebserver.h"
+#include "controller.h"
 #include "http_time_sync.h"
 #include "messages.h"
 #include "ota.h"
@@ -216,6 +217,10 @@ void baseSetup()
   initWebServer();
 #endif
 
+#ifdef ESP32
+  initController();
+#endif
+
   pluginManager.addPlugin(new DrawPlugin());
   pluginManager.addPlugin(new BreakoutPlugin());
   pluginManager.addPlugin(new SnakePlugin());
@@ -303,6 +308,10 @@ void loop()
   static uint8_t taskCounter = 0;
 
   btn.read();
+
+#ifdef ESP32
+  updateController();
+#endif
 
 #ifdef ENABLE_SERVER
   ElegantOTA.loop();

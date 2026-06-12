@@ -1,4 +1,5 @@
 #include "PluginManager.h"
+#include "controller.h"
 #include "scheduler.h"
 
 #ifdef ENABLE_SERVER
@@ -121,6 +122,12 @@ void onWsEvent(AsyncWebSocket *server,
             Screen.setBrightness(brightness, true);
             sendInfo();
           }
+#ifdef ESP32
+          else if (!strcmp(event, "bt-pair"))
+          {
+            enableControllerPairing();
+          }
+#endif
         }
       }
     }
