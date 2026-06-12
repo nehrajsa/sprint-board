@@ -1,4 +1,4 @@
-import { type Component, createMemo, Show } from "solid-js";
+import { type Component, createEffect, createMemo, onCleanup, Show } from "solid-js";
 
 import { Layout } from "./components/layout/layout";
 import Sidebar from "./components/layout/sidebar";
@@ -102,8 +102,22 @@ export const App: Component = () => {
 
   const handleSnakePair = () => {
     actions.send(JSON.stringify({ event: "bt-pair" }));
-    toast("Hold the Xbox sync button ~3 s (BLE mode) then wait", 5000);
+    toast("Put controller in BLE pairing mode, then wait…", 5000);
   };
+
+  // Poll for BLE status while on Snake and not yet connected.
+  // sendInfo() must run on Core 0 (WS callback), so we request it from here
+  // rather than pushing from the firmware's main loop (Core 1).
+  createEffect(() => {
+    const isSnake = store.plugin === 3;
+    const connected = store.btStatus === "connected";
+    if (!isSnake || connected) return;
+
+    const id = setInterval(() => {
+      actions.send(JSON.stringify({ event: "info" }));
+    }, 1500);
+    onCleanup(() => clearInterval(id));
+  });
 
   const renderLedMatrix = () => (
     <div class="grid p-8 h-full justify-center items-center sm:p-4 sm:m-0">

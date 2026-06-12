@@ -1,6 +1,7 @@
 #include "PluginManager.h"
 #include "controller.h"
 #include "scheduler.h"
+#include "constants.h"
 
 #ifdef ENABLE_SERVER
 
@@ -24,6 +25,9 @@ void sendInfo()
   jsonDocument["rotation"] = Screen.currentRotation;
   jsonDocument["brightness"] = Screen.getCurrentBrightness();
   jsonDocument["scheduleActive"] = Scheduler.isActive;
+#ifdef ESP32
+  jsonDocument["btStatus"] = getControllerStatus();
+#endif
 
   JsonArray scheduleArray = jsonDocument["schedule"].to<JsonArray>();
   for (const auto &item : Scheduler.schedule)

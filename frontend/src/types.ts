@@ -23,6 +23,7 @@ export interface StoreActions {
   setSchedule: (items: ScheduleItem[]) => void;
   setArtnetUniverse: (artnetUniverse: number) => void;
   setGOLDelay: (GOLDelay: number) => void;
+  setBtStatus: (status: string) => void;
   send: (message: string | ArrayBuffer) => void;
 }
 
@@ -40,6 +41,7 @@ export interface Store {
   connectionState: () => number;
   connectionStatus?: string;
   schedule: ScheduleItem[];
+  btStatus: string;
 }
 
 export interface IToastContext {

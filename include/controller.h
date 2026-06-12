@@ -11,5 +11,6 @@ extern volatile uint8_t controllerDirection; // 1=up 2=right 3=down 4=left 0=non
 void initController();
 void updateController();
 void enableControllerPairing();
+const char *getControllerStatus();
 
 #endif

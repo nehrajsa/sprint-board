@@ -32,6 +32,7 @@ const [mainStore, setStore] = createStore<Store>({
   connectionState: wsState,
   connectionStatus: connectionStatus[0],
   schedule: [],
+  btStatus: "idle",
 });
 
 const actions: StoreActions = {
@@ -42,6 +43,7 @@ const actions: StoreActions = {
   setBrightness: (brightness) => setStore("brightness", brightness),
   setArtnetUniverse: (artnetUniverse) => setStore("artnetUniverse", artnetUniverse),
   setGOLDelay: (GOLDelay) => setStore("GOLDelay", GOLDelay),
+  setBtStatus: (status) => setStore("btStatus", status),
   setIndexMatrix: (indexMatrix) => setStore("indexMatrix", indexMatrix),
   setLeds: (leds) => setStore("leds", leds),
   setSystemStatus: (systemStatus: SYSTEM_STATUS) => setStore("systemStatus", systemStatus),
@@ -124,6 +126,10 @@ export const StoreProvider = (props?: { value?: Store; children?: JSX.Element })
 
             if (isValidNumber(json.plugin)) {
               actions.setPlugin(json.plugin);
+            }
+
+            if (typeof json.btStatus === "string") {
+              actions.setBtStatus(json.btStatus);
             }
 
             if (mainStore.plugin === 1) {

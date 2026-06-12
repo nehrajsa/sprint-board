@@ -152,7 +152,7 @@ export const Sidebar: Component<SidebarProps> = (props) => {
         <Show when={store?.plugin === 3 && !store?.isActiveScheduler}>
           <div class="my-6 border-t border-gray-200" />
 
-          <SidebarSection title="Xbox Controller">
+          <SidebarSection title="Bluetooth Controller">
             <button
               type="button"
               onClick={props.onSnakePair}
@@ -161,8 +161,20 @@ export const Sidebar: Component<SidebarProps> = (props) => {
               <i class="fa-solid fa-gamepad" />
               <span>Pair Controller</span>
             </button>
+            <div class="flex items-center gap-2 px-1">
+              <span
+                class={`w-2 h-2 rounded-full flex-shrink-0 ${
+                  store?.btStatus === "connected"
+                    ? "bg-green-500"
+                    : store?.btStatus === "scanning" || store?.btStatus === "connecting"
+                      ? "bg-amber-400"
+                      : "bg-gray-300"
+                }`}
+              />
+              <span class="text-xs text-gray-500 capitalize">{store?.btStatus ?? "idle"}</span>
+            </div>
             <p class="text-xs text-gray-500 text-center">
-              Hold sync ~3 s (rapid blink = BLE mode), then click.
+              Put controller in BLE pairing mode, then click.
               D-pad or left stick steers the snake.
             </p>
           </SidebarSection>

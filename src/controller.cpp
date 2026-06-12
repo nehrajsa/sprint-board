@@ -1,6 +1,7 @@
 #ifdef ESP32
 
 #include "controller.h"
+#include <Arduino.h>
 #include <NimBLEDevice.h>
 
 volatile uint8_t controllerDirection = 0;
@@ -10,8 +11,10 @@ static const NimBLEUUID HID_REPORT_UUID("2a4d");
 
 static NimBLEClient *bleClient = nullptr;
 static volatile bool deviceFound = false;
-static NimBLEAddress foundAddress("00:00:00:00:00:00");
+static NimBLEAddress foundAddress;
 static volatile bool connecting = false;
+static bool bleInitialized = false;
+static volatile bool pairingRequested = false;
 
 // ---------- HID report parsing ----------
 // Xbox One S / Series X in BLE mode (hat-switch d-pad):
@@ -27,9 +30,9 @@ static uint8_t parseReport(const uint8_t *d, size_t len)
 
   uint8_t hat = d[2] & 0x0F;
   if      (hat == 0 || hat == 1 || hat == 7) return 1; // up
-  else if (hat == 2 || hat == 3 || hat == 1) return 2; // right
-  else if (hat == 4 || hat == 3 || hat == 5) return 3; // down
-  else if (hat == 6 || hat == 5 || hat == 7) return 4; // left
+  else if (hat == 2 || hat == 3)             return 2; // right
+  else if (hat == 4 || hat == 5)             return 3; // down
+  else if (hat == 6 || hat == 7)             return 4; // left
 
   if (len >= 7)
   {
@@ -60,16 +63,16 @@ class ClientCallbacks : public NimBLEClientCallbacks
   {
     Serial.println("[BLE] Controller connected");
   }
-  void onDisconnect(NimBLEClient *client) override   // v1.x: no reason param
+  void onDisconnect(NimBLEClient *client, int reason) override
   {
     Serial.println("[BLE] Controller disconnected");
     bleClient = nullptr;
   }
 };
 
-class ScanCallbacks : public NimBLEAdvertisedDeviceCallbacks  // v1.x class name
+class ScanCallbacks : public NimBLEScanCallbacks
 {
-  void onResult(NimBLEAdvertisedDevice *dev) override
+  void onResult(const NimBLEAdvertisedDevice *dev) override
   {
     if (connecting || bleClient || deviceFound)
       return;
@@ -78,18 +81,45 @@ class ScanCallbacks : public NimBLEAdvertisedDeviceCallbacks  // v1.x class name
     if (isHID || isXbox)
     {
       Serial.printf("[BLE] Found: %s\n", dev->getName().c_str());
-      foundAddress = dev->getAddress(); // copy address before scan invalidates pointer
-      deviceFound  = true;             // flag read by updateController() on main loop
+      foundAddress = dev->getAddress();
+      deviceFound  = true;
       NimBLEDevice::getScan()->stop();
     }
   }
 };
 
-// ---------- Connect (called from main loop, not BLE task) ----------
+// ---------- BLE init + scan task (runs off the loop task to avoid watchdog) ----------
 
-static void doConnect()
+static void bleInitTask(void *param)
 {
-  connecting = true;
+  if (!bleInitialized)
+  {
+    NimBLEDevice::init("IKEA-LED");
+    NimBLEDevice::setPower(ESP_PWR_LVL_P9);
+
+    // Enable bonding so Xbox controller completes its pairing handshake
+    NimBLEDevice::setSecurityAuth(true, false, true);
+    NimBLEDevice::setSecurityIOCap(BLE_HS_IO_NO_INPUT_OUTPUT);
+
+    NimBLEScan *scan = NimBLEDevice::getScan();
+    scan->setScanCallbacks(new ScanCallbacks(), false);
+    scan->setActiveScan(true);
+    scan->setInterval(160); // 100 ms interval
+    scan->setWindow(48);    // 30 ms window — 30% duty cycle leaves WiFi room
+
+    bleInitialized = true;
+    Serial.println("[BLE] NimBLE initialized");
+  }
+
+  Serial.println("[BLE] Scanning for controller (15 s)...");
+  NimBLEDevice::getScan()->start(15, false);
+  vTaskDelete(NULL);
+}
+
+// ---------- Connect task ----------
+
+static void doConnectTask(void *param)
+{
   NimBLEClient *client = NimBLEDevice::createClient(foundAddress);
   client->setClientCallbacks(new ClientCallbacks(), false);
 
@@ -98,6 +128,7 @@ static void doConnect()
     Serial.println("[BLE] Connection failed");
     NimBLEDevice::deleteClient(client);
     connecting = false;
+    vTaskDelete(NULL);
     return;
   }
 
@@ -108,11 +139,12 @@ static void doConnect()
     client->disconnect();
     NimBLEDevice::deleteClient(client);
     connecting = false;
+    vTaskDelete(NULL);
     return;
   }
 
   bool subscribed = false;
-  for (auto &c : *svc->getCharacteristics(true))
+  for (auto &c : svc->getCharacteristics(true))
   {
     if (c->getUUID() == HID_REPORT_UUID && c->canNotify())
     {
@@ -133,42 +165,54 @@ static void doConnect()
     NimBLEDevice::deleteClient(client);
   }
   connecting = false;
+  vTaskDelete(NULL);
 }
 
 // ---------- Public API ----------
 
 void initController()
 {
-  NimBLEDevice::init("IKEA-LED");
-  NimBLEDevice::setPower(ESP_PWR_LVL_P9);
+  // NimBLE is initialized lazily in enableControllerPairing() to avoid
+  // hanging or crashing during boot before the screen task is created.
+}
 
-  NimBLEScan *scan = NimBLEDevice::getScan();
-  scan->setAdvertisedDeviceCallbacks(new ScanCallbacks(), false); // v1.x method name
-  scan->setActiveScan(true);
-  scan->setInterval(100);
-  scan->setWindow(99);
-
-  Serial.println("[BLE] NimBLE initialized — use web UI to start pairing");
+const char *getControllerStatus()
+{
+  if (!bleInitialized)                          return "idle";
+  if (bleClient && bleClient->isConnected())    return "connected";
+  if (connecting)                               return "connecting";
+  if (NimBLEDevice::getScan()->isScanning())    return "scanning";
+  return "idle";
 }
 
 void updateController()
 {
+  if (pairingRequested)
+  {
+    pairingRequested = false;
+    if (bleClient && bleClient->isConnected())
+    {
+      Serial.println("[BLE] Controller already connected");
+    }
+    else
+    {
+      xTaskCreatePinnedToCore(bleInitTask, "bleInit", 8192, NULL, 1, NULL, 1);
+    }
+  }
+
   if (deviceFound && !connecting && !bleClient)
   {
     deviceFound = false;
-    doConnect();
+    connecting = true;
+    xTaskCreatePinnedToCore(doConnectTask, "bleConnect", 8192, NULL, 1, NULL, 1);
   }
 }
 
 void enableControllerPairing()
 {
-  if (bleClient && bleClient->isConnected())
-  {
-    Serial.println("[BLE] Controller already connected");
-    return;
-  }
-  Serial.println("[BLE] Scanning for controller (15 s)…");
-  NimBLEDevice::getScan()->start(15, false); // non-blocking
+  // Just set a flag — all BLE work happens in updateController() on Core 1
+  // so we don't block the async web server task (Core 0) and drop the WS connection.
+  pairingRequested = true;
 }
 
 #endif
