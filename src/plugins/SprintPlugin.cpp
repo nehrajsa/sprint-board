@@ -32,7 +32,7 @@ int SprintPlugin::computeDaysLeft(const String &dateStr) const
   time_t targetT = mktime(&target);
 
   if (targetT < todayT)
-    return -1;
+    return -2; // past date — distinct from -1 (NTP not synced)
 
   int count = 0;
   for (time_t cur = todayT + 86400L; cur <= targetT; cur += 86400L)
@@ -58,6 +58,8 @@ int SprintPlugin::nearestSprintDays() const
     int days = computeDaysLeft(date);
     if (days == -1)
       return -1; // NTP not synced
+    if (days == -2)
+      continue; // past date, skip
     if (days >= 0 && days < minFuture)
     {
       minFuture = days;
