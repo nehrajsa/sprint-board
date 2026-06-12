@@ -103,13 +103,16 @@ void SprintPlugin::redraw()
 {
   Screen.clear();
 
-  // If dates are configured but NTP hasn't synced yet, show 3 dim dots
-  struct tm dummy;
-  bool ntpSynced = getLocalTime(&dummy, 0);
-  bool hasDates = !sprintConfig.sprintDates.empty() ||
-                  sprintConfig.milestoneDate.length() >= 10;
+  // Use the stored values to detect NTP-not-synced (-1) rather than calling
+  // getLocalTime() again here — a second independent call can disagree with
+  // the one in loop(), causing an empty row instead of the loading dots.
+  bool hasSprints = !sprintConfig.sprintDates.empty();
+  bool hasMilestone = sprintConfig.milestoneDate.length() >= 10;
+  bool hasDates = hasSprints || hasMilestone;
+  bool ntpNotSynced = (hasSprints && lastSprintDays == -1) ||
+                      (hasMilestone && lastMilestoneDays == -1);
 
-  if (hasDates && !ntpSynced)
+  if (hasDates && ntpNotSynced)
   {
     Screen.setPixel(5, 7, 1, 80);
     Screen.setPixel(8, 7, 1, 80);
