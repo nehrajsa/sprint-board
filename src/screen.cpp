@@ -392,11 +392,6 @@ void Screen_::drawBigNumbers(int x, int y, const std::vector<int> &numbers, uint
   }
 }
 
-void Screen_::drawWeather(int x, int y, int weather, uint8_t brightness)
-{
-  drawCharacter(x, y, readBytes(weatherIcons[weather]), 16, brightness);
-}
-
 void Screen_::scrollText(const std::string &text, int delayTime, uint8_t brightness, uint8_t fontid)
 {
   // lets determine the current font

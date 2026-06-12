@@ -85,7 +85,6 @@ public:
                       int y,
                       const std::vector<int> &numbers,
                       uint8_t brightness = MAX_BRIGHTNESS);
-  void drawWeather(int x, int y, int weather, uint8_t brightness = MAX_BRIGHTNESS);
   std::vector<int> readBytes(const std::vector<int> &bytes);
 
   void scrollText(const std::string &text,

@@ -53,7 +53,6 @@
 #include "plugins/BigClockPlugin.h"
 #include "plugins/ClockPlugin.h"
 #include "plugins/SprintPlugin.h"
-#include "plugins/WeatherPlugin.h"
 #endif
 
 #include "asyncwebserver.h"
@@ -250,7 +249,6 @@ void baseSetup()
   pluginManager.addPlugin(new PongClockPlugin());
   pluginManager.addPlugin(new TickingClockPlugin());
   pluginManager.addPlugin(new SprintPlugin());
-  pluginManager.addPlugin(new WeatherPlugin());
   pluginManager.addPlugin(new AnimationPlugin());
   pluginManager.addPlugin(new DDPPlugin());
   pluginManager.addPlugin(new ArtNetPlugin());

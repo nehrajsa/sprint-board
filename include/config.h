@@ -17,7 +17,6 @@ private:
 #endif
   
   // Current values with safe defaults
-  String weatherLocation;
   String ntpServer;
   String tzInfo;
   String ianaTimezone;
@@ -40,7 +39,6 @@ public:
   void setDefaults();
   
   // Getters (always return valid values)
-  String getWeatherLocation() const;
   String getNtpServer() const;
   String getTzInfo() const;
   String getIanaTimezone() const;
@@ -48,7 +46,6 @@ public:
   bool isInitialized() const { return initialized; }
 
   // Setters with validation
-  void setWeatherLocation(const String& location);
   void setNtpServer(const String& server);
   void setTzInfo(const String& tz);
   void setIanaTimezone(const String& tz);

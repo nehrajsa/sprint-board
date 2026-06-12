@@ -248,8 +248,6 @@ void handleGetConfig(AsyncWebServerRequest *request)
     String json = config.toJson();
     Serial.println("[WebHandler] ============================================");
     Serial.println("[WebHandler] Current Configuration:");
-    Serial.print("[WebHandler] Weather Location: ");
-    Serial.println(config.getWeatherLocation());
     Serial.print("[WebHandler] NTP Server: ");
     Serial.println(config.getNtpServer());
     Serial.print("[WebHandler] Timezone: ");
@@ -311,8 +309,6 @@ void handleSetConfigBody(AsyncWebServerRequest *request,
       config.save();
       Serial.println("[WebHandler] ============================================");
       Serial.println("[WebHandler] Configuration Updated:");
-      Serial.print("[WebHandler] Weather Location: ");
-      Serial.println(config.getWeatherLocation());
       Serial.print("[WebHandler] NTP Server: ");
       Serial.println(config.getNtpServer());
       Serial.print("[WebHandler] Timezone: ");
@@ -455,8 +451,6 @@ void handleResetConfig(AsyncWebServerRequest *request)
     config.save();
     Serial.println("[WebHandler] ============================================");
     Serial.println("[WebHandler] Configuration Reset to Defaults:");
-    Serial.print("[WebHandler] Weather Location: ");
-    Serial.println(config.getWeatherLocation());
     Serial.print("[WebHandler] NTP Server: ");
     Serial.println(config.getNtpServer());
     Serial.print("[WebHandler] Timezone: ");

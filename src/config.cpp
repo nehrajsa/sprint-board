@@ -46,8 +46,6 @@ void Config::begin()
   
   Serial.println("[Config] ============================================");
   Serial.println("[Config] Current Configuration:");
-  Serial.print("[Config] Weather Location: ");
-  Serial.println(weatherLocation);
   Serial.print("[Config] NTP Server: ");
   Serial.println(ntpServer);
   Serial.print("[Config] Timezone: ");
@@ -60,7 +58,6 @@ void Config::begin()
 void Config::setDefaults()
 {
   // Use constants from constants.h as defaults
-  weatherLocation = String(WEATHER_LOCATION);
   ntpServer = String(NTP_SERVER);
   tzInfo = String(TZ_INFO);
   ianaTimezone = String(IANA_TIMEZONE);
@@ -77,7 +74,6 @@ void Config::load()
   
   try {
     // Load with fallback to defaults
-    weatherLocation = preferences.getString("weatherLoc", String(WEATHER_LOCATION));
     ntpServer = preferences.getString("ntpServer", String(NTP_SERVER));
     tzInfo = preferences.getString("tzInfo", String(TZ_INFO));
     ianaTimezone = preferences.getString("ianaTz", String(IANA_TIMEZONE));
@@ -100,7 +96,6 @@ void Config::save()
   }
   
   try {
-    preferences.putString("weatherLoc", weatherLocation);
     preferences.putString("ntpServer", ntpServer);
     preferences.putString("tzInfo", tzInfo);
     preferences.putString("ianaTz", ianaTimezone);
@@ -115,11 +110,6 @@ void Config::save()
 #endif
 }
 
-
-String Config::getWeatherLocation() const
-{
-  return weatherLocation.length() > 0 ? weatherLocation : String(WEATHER_LOCATION);
-}
 
 String Config::getNtpServer() const
 {
@@ -140,14 +130,6 @@ bool Config::getAutoStartSchedule() const
 {
   return autoStartSchedule;
 }
-
-void Config::setWeatherLocation(const String& location)
-{
-  if (location.length() > 0 && location.length() < 100) {
-    weatherLocation = location;
-  }
-}
-
 
 void Config::setNtpServer(const String& server)
 {
@@ -179,7 +161,6 @@ void Config::setAutoStartSchedule(bool autoStart)
 String Config::toJson() const
 {
   JsonDocument doc;
-  doc["weatherLocation"] = weatherLocation;
   doc["ntpServer"] = ntpServer;
   doc["tzInfo"] = tzInfo;
   doc["ianaTimezone"] = ianaTimezone;
@@ -208,13 +189,6 @@ bool Config::fromJson(const String& json)
   }
   
   // Validate and set each field
-  if (doc["weatherLocation"].is<String>()) {
-    String loc = doc["weatherLocation"].as<String>();
-    if (loc.length() > 0 && loc.length() < 100) {
-      weatherLocation = loc;
-    }
-  }
-  
   if (doc["ntpServer"].is<String>()) {
     String ntp = doc["ntpServer"].as<String>();
     if (ntp.length() > 0 && ntp.length() < 100) {
